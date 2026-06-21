@@ -1,0 +1,141 @@
+import java.io.*;
+
+import java.nio.file.*;
+
+import java.util.concurrent.*;
+
+// Shared resource with synchronization
+
+class SharedCounter {
+
+    private int totalLines = 0;
+
+    public synchronized void addLines(int count) {
+
+        totalLines += count;
+
+    }
+
+    public synchronized int getTotalLines() {
+
+        return totalLines;
+
+    }
+
+}
+
+// Task for processing a file
+
+class FileTask implements Runnable {
+
+    private final String filePath;
+
+    private final SharedCounter counter;
+
+    public FileTask(String filePath, SharedCounter counter) {
+
+        this.filePath = filePath;
+
+        this.counter = counter;
+
+    }
+
+    @Override
+
+    public void run() {
+
+        try {
+
+            int lineCount = 0;
+
+            BufferedReader reader = new BufferedReader(
+
+                    new FileReader(filePath));
+
+            while (reader.readLine() != null) {
+
+                lineCount++;
+
+            }
+
+            reader.close();
+
+            System.out.println(
+
+                    Thread.currentThread().getName()
+
+                            + " processed "
+
+                            + filePath
+
+                            + " | Lines: "
+
+                            + lineCount);
+
+            counter.addLines(lineCount);
+
+        } catch (IOException e) {
+
+            System.out.println("Error reading file: " + filePath);
+
+        }
+
+    }
+
+}
+
+public class MultithreadedFileProcessor {
+
+    public static void main(String[] args) {
+
+        // List of files to process
+
+        String[] files = {
+
+                "file1.txt",
+
+                "file2.txt",
+
+                "file3.txt",
+
+                "file4.txt"
+
+        };
+
+        SharedCounter counter = new SharedCounter();
+
+        // Create a thread pool
+
+        ExecutorService executor =
+
+                Executors.newFixedThreadPool(4);
+
+        // Submit tasks
+
+        for (String file : files) {
+
+            executor.execute(new FileTask(file, counter));
+
+        }
+
+        // Shutdown executor
+
+        executor.shutdown();
+
+        try {
+
+            executor.awaitTermination(1, TimeUnit.MINUTES);
+
+        } catch (InterruptedException e) {
+
+            e.printStackTrace();
+
+        }
+
+        System.out.println("\nTotal Lines Processed: "
+
+                + counter.getTotalLines());
+
+    }
+
+}
